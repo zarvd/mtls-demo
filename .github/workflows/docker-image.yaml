@@ -42,3 +42,33 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push ${{ env.SERVER_IMG }}
+
+  build-client-image:
+    name: Build mtls-demo client image
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 30
+    env:
+      CLIENT_IMG: ghcr.io/zarvd/mtls-demo/client:${{ inputs.tag || github.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Build Docker Image
+        run: |
+          CLIENT_IMG=${{ env.CLIENT_IMG }} make image-client
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push Docker Image
+        run: |
+          docker push ${{ env.CLIENT_IMG }}
