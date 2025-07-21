@@ -19,6 +19,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
     timeout-minutes: 30
     env:
       SERVER_IMG: ghcr.io/zarvd/mtls-demo/server:${{ inputs.tag || github.sha }}
