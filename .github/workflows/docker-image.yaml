@@ -5,9 +5,12 @@ on:
     inputs:
       tag:
         description: "Image tag"
-        required: true
+        required: false
         default: "latest"
         type: string
+  push:
+    branches:
+      - master
 
 jobs:
   build-server-image:
@@ -18,7 +21,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
-      SERVER_IMG: ghcr.io/zarvd/mtls-demo/server:${{ inputs.tag }}
+      SERVER_IMG: ghcr.io/zarvd/mtls-demo/server:${{ inputs.tag || github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

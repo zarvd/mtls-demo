@@ -31,7 +31,7 @@ run-client: client
 		--key-pairs certs/client.crt:certs/client.key
 .PHONY: run-client
 
-SERVER_IMG=ghcr.io/zarvd/mtls-demo/server:v0.0.1
+SERVER_IMG ?= ghcr.io/zarvd/mtls-demo/server:v0.0.1
 image-server:
 	docker build \
 		--no-cache \
@@ -40,7 +40,7 @@ image-server:
 		--file docker/server.Dockerfile .
 .PHONY: image-server
 
-CLIENT_IMG=ghcr.io/zarvd/mtls-demo/client:v0.0.1
+CLIENT_IMG ?= ghcr.io/zarvd/mtls-demo/client:v0.0.1
 image-client:
 	docker build \
 		--no-cache \
