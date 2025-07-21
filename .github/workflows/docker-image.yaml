@@ -3,16 +3,11 @@ name: "Build Docker Image"
 on:
   workflow_dispatch:
     inputs:
-      commit:
-        description: "Git Commit"
-        required: false
-        default: ""
+      tag:
+        description: "Image tag"
+        required: true
+        default: "latest"
         type: string
-  push:
-    tags:
-      - "**"
-    branches:
-      - "main"
 
 jobs:
   build-server-image:
@@ -23,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
-      SERVER_IMG: ghcr.io/zarvd/mtls-demo-server:${{ github.sha }}
+      SERVER_IMG: ghcr.io/zarvd/mtls-demo/server:${{ inputs.tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
