@@ -78,7 +78,6 @@ func (b *Bundle) createCAPool() (*x509.CertPool, error) {
 
 	existing, found := b.bundleMap.GetCAPEMs()
 	if found && PEMsEqual(existing, caCertPEMs) {
-		slog.Info("CAPEMs are the same, skipping overwrite")
 		caPool, _ := b.bundleMap.GetCAPool()
 		return caPool, nil
 	}
@@ -117,7 +116,6 @@ func (b *Bundle) createKeyPairs() ([]tls.Certificate, error) {
 
 	existing, found := b.bundleMap.GetRawKeyPairs()
 	if found && RawKeyPairsEqual(existing, rawKeyPairs) {
-		slog.Info("Key pairs are the same, skipping overwrite")
 		keyPairs, _ := b.bundleMap.GetKeyPairs()
 		return keyPairs, nil
 	}
@@ -140,7 +138,10 @@ func (b *Bundle) createKeyPairs() ([]tls.Certificate, error) {
 func (b *Bundle) load() error {
 	t1 := time.Now()
 	defer func() {
-		slog.Info("Loaded bundles", slog.Duration("duration", time.Since(t1)))
+		elapsed := time.Since(t1)
+		if elapsed > 1*time.Millisecond {
+			slog.Info("Loaded bundles", slog.Duration("duration", elapsed))
+		}
 	}()
 
 	_, err := b.createCAPool()

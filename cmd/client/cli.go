@@ -46,18 +46,39 @@ func (c *CLI) Run(ctx context.Context) error {
 		},
 	}
 
-	slog.Info("Sending request to server", slog.String("server", c.ServerAddress))
-	resp, err := client.Get(c.ServerAddress)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	ticker := time.NewTicker(c.Interval)
+	defer ticker.Stop()
 
-	slog.Info("Response from server", slog.String("status", resp.Status))
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	sendRequest := func() error {
+		t1 := time.Now()
+		resp, err := client.Get(c.ServerAddress)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		slog.Info("Response from server",
+			slog.String("server", c.ServerAddress),
+			slog.String("status", resp.Status),
+			slog.Duration("duration", time.Since(t1)),
+			slog.String("body", string(body)),
+		)
+		return nil
 	}
-	slog.Info("Response body", slog.String("body", string(body)))
-	return nil
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := sendRequest(); err != nil {
+				slog.Error("Failed to send request", slog.String("error", err.Error()))
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }

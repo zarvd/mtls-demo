@@ -1,0 +1,66 @@
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: allow-serving-cert-alpha
+spec:
+  selector:
+    issuerRef:
+      name: ca-issuer-alpha
+      kind: ClusterIssuer
+  allowed:
+    isCA: false
+    usages:
+      - "server auth"
+      - "digital signature"
+      - "key encipherment"
+    commonName:
+      required: true
+      value: "*.*.svc.cluster.local"
+    dnsNames:
+      required: true
+      values:
+        - "*.*.svc.cluster.local"
+---
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: allow-client-cert-alpha
+spec:
+  selector:
+    issuerRef:
+      name: ca-issuer-alpha
+      kind: ClusterIssuer
+  allowed:
+    isCA: false
+    usages:
+      - "client auth"
+    commonName:
+      required: true
+      value: "*.*.svc.cluster.local"
+    dnsNames:
+      required: true
+      values:
+        - "*.*.svc.cluster.local"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-manager-policy:ca-issuer-alpha
+rules:
+  - apiGroups: ["policy.cert-manager.io"]
+    resources: ["certificaterequestpolicies"]
+    verbs: ["use"]
+    resourceNames: ["allow-serving-cert-alpha", "allow-client-cert-alpha"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-manager-policy:ca-issuer-alpha
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cert-manager-policy:ca-issuer-alpha
+subjects:
+  - kind: Group
+    name: system:authenticated
+    apiGroup: rbac.authorization.k8s.io

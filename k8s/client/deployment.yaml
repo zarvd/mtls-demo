@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mtls-client
+  namespace: mtls-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mtls-client
+  template:
+    metadata:
+      labels:
+        app: mtls-client
+    spec:
+      containers:
+        - name: mtls-client
+          image: ghcr.io/zarvd/mtls-demo/client:0ab379bcb1c3eb1634f93bbde6a05d132a4105ba
+          command:
+            - /usr/local/bin/mtls-client
+            - --certificate-authorities
+            - /certs/alpha/ca.crt
+            - --certificate-authorities
+            - /certs/beta/ca.crt
+            - --key-pairs
+            - /certs/alpha/tls.crt:/certs/alpha/tls.key
+            - --key-pairs
+            - /certs/beta/tls.crt:/certs/beta/tls.key
+            - --server-address
+            - https://mtls-server.mtls-server.svc.cluster.local:8443/ping
+            - --server-name
+            - mtls-server.mtls-server.svc.cluster.local
+          volumeMounts:
+            - name: certs-alpha
+              mountPath: /certs/alpha
+              readOnly: true
+            - name: certs-beta
+              mountPath: /certs/beta
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 1000m
+              memory: 1000Mi
+      volumes:
+        - name: certs-alpha
+          secret:
+            secretName: client-secret-alpha
+        - name: certs-beta
+          secret:
+            secretName: client-secret-beta

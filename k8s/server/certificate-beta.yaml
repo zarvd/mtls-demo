@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: certificate-beta
+  namespace: mtls-server
+spec:
+  duration: 1h
+  renewBefore: 30m
+  secretName: server-secret-beta
+  commonName: mtls-server.mtls-server.svc.cluster.local
+  dnsNames:
+    - mtls-server.mtls-server.svc.cluster.local
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+  privateKey:
+    rotationPolicy: Always
+    algorithm: RSA
+    encoding: PKCS1
+    size: 4096
+  issuerRef:
+    name: ca-issuer-beta
+    kind: ClusterIssuer
+    group: cert-manager.io
