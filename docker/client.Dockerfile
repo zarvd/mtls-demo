@@ -5,12 +5,12 @@ WORKDIR /workspace
 COPY . .
 RUN apt update && apt install make -y
 
-RUN CGO_ENABLED=0 go build -o bin/server ./cmd/server
+RUN CGO_ENABLED=0 go build -o bin/client ./cmd/client
 
 FROM gcr.io/distroless/static-debian12:debug
 
-COPY --from=builder /workspace/bin/server /usr/local/bin/mtls-server
+COPY --from=builder /workspace/bin/client /usr/local/bin/mtls-client
 
 EXPOSE 8443
 
-ENTRYPOINT ["/usr/local/bin/mtls-server"]
+ENTRYPOINT ["/usr/local/bin/mtls-client"]
