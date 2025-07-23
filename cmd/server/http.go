@@ -17,8 +17,14 @@ func RunHTTPServer(ctx context.Context, port int, bundle *keypair.Bundle) error 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		t1 := time.Now()
-		slog.Info("Incoming request", slog.String("method", r.Method), slog.String("url", r.URL.String()))
-		defer slog.Info("Request handled", slog.Duration("duration", time.Since(t1)))
+		defer func() {
+			slog.Info(
+				"Request handled",
+				slog.String("method", r.Method),
+				slog.String("url", r.URL.String()),
+				slog.Duration("duration", time.Since(t1)),
+			)
+		}()
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Hello, World!"))
