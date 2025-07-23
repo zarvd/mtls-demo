@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -30,11 +29,7 @@ func RunHTTPServer(ctx context.Context, port int, bundle *keypair.Bundle) error 
 		w.Write([]byte("Hello, World!"))
 	})
 
-	tlsConfig := &tls.Config{
-		ClientCAs:          bundle.CAPool(),
-		ClientAuth:         tls.RequireAndVerifyClientCert,
-		GetConfigForClient: bundle.CreateGetConfigForClient(),
-	}
+	tlsConfig := bundle.CreateTLSConfigForServer()
 
 	server := http.Server{
 		Addr:      addr,

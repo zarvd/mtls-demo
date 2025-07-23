@@ -63,12 +63,45 @@ func (b *Bundle) StartReloadLoop(ctx context.Context) {
 	}
 }
 
-func (b *Bundle) CreateGetConfigForClient() func(info *tls.ClientHelloInfo) (*tls.Config, error) {
-	return func(info *tls.ClientHelloInfo) (*tls.Config, error) {
-		return &tls.Config{
-			Certificates: b.KeyPairs(),
-			RootCAs:      b.CAPool(),
-		}, nil
+func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
+	return &tls.Config{
+		InsecureSkipVerify: true, // Enable custom certificate verification
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			slog.Info("Verifying peer certificate")
+			certs := make([]*x509.Certificate, 0, len(rawCerts))
+			for _, rawCert := range rawCerts {
+				cert, err := x509.ParseCertificate(rawCert)
+				if err != nil {
+					return err
+				}
+				certs = append(certs, cert)
+			}
+			opts := x509.VerifyOptions{
+				Roots: b.CAPool(),
+			}
+			for _, cert := range certs[1:] {
+				opts.Intermediates.AddCert(cert)
+			}
+			_, err := certs[0].Verify(opts)
+			return err
+		},
+		GetClientCertificate: func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			slog.Info("Getting client certificate")
+			return &b.KeyPairs()[0], nil
+		},
+	}
+}
+
+func (b *Bundle) CreateTLSConfigForServer() *tls.Config {
+	return &tls.Config{
+		GetConfigForClient: func(info *tls.ClientHelloInfo) (*tls.Config, error) {
+			slog.Info("Getting config for client", slog.String("server_name", info.ServerName))
+			return &tls.Config{
+				Certificates: b.KeyPairs(),
+				ClientAuth:   tls.RequireAndVerifyClientCert,
+				ClientCAs:    b.CAPool(),
+			}, nil
+		},
 	}
 }
 

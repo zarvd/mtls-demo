@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"io"
 	"log/slog"
 	"net/http"
@@ -32,12 +31,8 @@ func (c *CLI) Run(ctx context.Context) error {
 		bundle.StartReloadLoop(ctx)
 	}()
 
-	tlsConfig := &tls.Config{
-		RootCAs:            bundle.CAPool(),
-		ServerName:         c.ServerName,
-		Certificates:       bundle.KeyPairs(),
-		GetConfigForClient: bundle.CreateGetConfigForClient(),
-	}
+	tlsConfig := bundle.CreateTLSConfigForClient()
+	tlsConfig.ServerName = c.ServerName
 
 	client := http.Client{
 		Timeout: Timeout,
@@ -50,6 +45,7 @@ func (c *CLI) Run(ctx context.Context) error {
 	defer ticker.Stop()
 
 	sendRequest := func() error {
+		client.CloseIdleConnections()
 		t1 := time.Now()
 		resp, err := client.Get(c.ServerAddress)
 		if err != nil {
