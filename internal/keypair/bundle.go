@@ -72,7 +72,7 @@ func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
 			for _, rawCert := range rawCerts {
 				cert, err := x509.ParseCertificate(rawCert)
 				if err != nil {
-					return err
+					return fmt.Errorf("custom verify peer certificate: %w", err)
 				}
 				certs = append(certs, cert)
 			}
@@ -82,8 +82,10 @@ func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
 			for _, cert := range certs[1:] {
 				opts.Intermediates.AddCert(cert)
 			}
-			_, err := certs[0].Verify(opts)
-			return err
+			if _, err := certs[0].Verify(opts); err != nil {
+				return fmt.Errorf("custom verify peer certificate: %w", err)
+			}
+			return nil
 		},
 		GetClientCertificate: func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
 			slog.Info("Getting client certificate")
