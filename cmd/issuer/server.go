@@ -16,7 +16,7 @@ func makeServerCertificate(
 	altNames []string,
 ) (*KeyPair, error) {
 	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(2025 + 123),
+		SerialNumber: big.NewInt(2025 + 456),
 		Subject:      subject,
 		DNSNames:     altNames,
 		NotBefore:    time.Now(),

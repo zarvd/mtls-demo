@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: mtls-server
-          image: ghcr.io/zarvd/mtls-demo/server:cfe7ba4fe0ce25df17dcfaf4f411086a09b659e5
+          image: ghcr.io/zarvd/mtls-demo/server:a797c5385035ee2dcbd5537e099d47e774095d12
           command:
             - /usr/local/bin/mtls-server
             - --certificate-authorities

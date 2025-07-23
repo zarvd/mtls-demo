@@ -35,6 +35,7 @@ spec:
     isCA: false
     usages:
       - "client auth"
+      - "digital signature"
     commonName:
       required: true
       value: "*.*.svc.cluster.local"

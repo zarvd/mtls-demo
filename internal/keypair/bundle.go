@@ -31,12 +31,18 @@ func NewBundle(opts Options) (*Bundle, error) {
 }
 
 func (b *Bundle) CAPool() *x509.CertPool {
-	caPool, _ := b.bundleMap.GetCAPool()
+	caPool, ok := b.bundleMap.GetCAPool()
+	if !ok {
+		panic("CAPool not found")
+	}
 	return caPool
 }
 
 func (b *Bundle) KeyPairs() []tls.Certificate {
-	keyPairs, _ := b.bundleMap.GetKeyPairs()
+	keyPairs, ok := b.bundleMap.GetKeyPairs()
+	if !ok {
+		panic("KeyPairs not found")
+	}
 	return keyPairs
 }
 

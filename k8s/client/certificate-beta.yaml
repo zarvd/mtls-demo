@@ -12,6 +12,7 @@ spec:
     - mtls-client.mtls-client.svc.cluster.local
   usages:
     - client auth
+    - digital signature
   privateKey:
     rotationPolicy: Always
     algorithm: RSA
