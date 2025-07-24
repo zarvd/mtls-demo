@@ -91,7 +91,8 @@ kubectl apply -f ./k8s/cert-manager/ca-clusterissuer.yaml
 To immediately renew all certificates with the new CA, use the cert-manager CLI:
 
 ```bash
-cmctl renew --all --all-namespaces
+cmctl renew --all --namespace=mtls-server
+cmctl renew --all --namespace=mtls-client
 ```
 
 **Note:** This step is optional as certificates will naturally renew using the new CA when they approach expiration.

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: mtls-server
-          image: ghcr.io/zarvd/mtls-demo/server:62fd489a378fadac7357449f99cf980c4e4789a9
+          image: ghcr.io/zarvd/mtls-demo/server:cc6a8ed404a340703da2b17650ddb825a318990d
           command:
             - /usr/local/bin/mtls-server
             - --ca-bundle=/certs/ca/ca-bundle.pem

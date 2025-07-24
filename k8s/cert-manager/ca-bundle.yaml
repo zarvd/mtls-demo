@@ -7,9 +7,6 @@ spec:
     - secret:
         name: self-signed-root-ca-0001
         key: tls.crt
-    - secret:
-        name: self-signed-root-ca-0002
-        key: tls.crt
   target:
     namespaceSelector:
       matchLabels:

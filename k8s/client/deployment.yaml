@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: mtls-client
-          image: ghcr.io/zarvd/mtls-demo/client:62fd489a378fadac7357449f99cf980c4e4789a9
+          image: ghcr.io/zarvd/mtls-demo/client:cc6a8ed404a340703da2b17650ddb825a318990d
           command:
             - /usr/local/bin/mtls-client
             - --ca-bundle=/certs/ca/ca-bundle.pem
