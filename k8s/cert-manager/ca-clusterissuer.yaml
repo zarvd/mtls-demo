@@ -4,4 +4,4 @@ metadata:
   name: ca-issuer
 spec:
   ca:
-    secretName: ca-key-pair-0001
+    secretName: ca-key-pair-0003

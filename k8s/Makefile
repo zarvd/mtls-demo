@@ -27,3 +27,15 @@ install-trust-manager:
 		--set app.trust.namespace=$(NAMESPACE) \
 		--set app.webhook.tls.approverPolicy.enabled=true \
 		--set app.webhook.tls.approverPolicy.certManagerNamespace=$(NAMESPACE)
+
+apply:
+	kubectl apply -f ./cert-manager
+	kubectl apply -f ./server/namespace.yaml
+	kubectl apply -f ./server
+	kubectl apply -f ./client/namespace.yaml
+	kubectl apply -f ./client
+
+clean:
+	kubectl delete -f ./server
+	kubectl delete -f ./client
+	kubectl delete -f ./cert-manager

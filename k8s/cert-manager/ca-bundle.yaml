@@ -5,7 +5,10 @@ metadata:
 spec:
   sources:
     - secret:
-        name: ca-key-pair-0001
+        name: ca-key-pair-0002
+        key: tls.crt
+    - secret:
+        name: ca-key-pair-0003
         key: tls.crt
   target:
     namespaceSelector:

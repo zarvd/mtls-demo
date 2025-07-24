@@ -50,18 +50,37 @@ func (b *Bundle) StartReloadLoop(ctx context.Context) {
 	}
 	defer watcher.Close()
 
-	for _, path := range b.opts.ListFilePaths() {
-		slog.Info("Watching file", "path", path)
-		watcher.Add(path)
+	watchChanges := func() {
+		const MaxRetries = 3
+		for _, path := range b.opts.ListFilePaths() {
+			slog.Info("Watching file", "path", path)
+
+			watched := false
+			for range MaxRetries {
+				err := watcher.Add(path)
+				if err == nil {
+					watched = true
+					break
+				}
+				slog.Error("Failed to watch file", "path", path, "error", err)
+				time.Sleep(time.Second)
+			}
+			if !watched {
+				panic(fmt.Sprintf("Failed to watch file: %s", path))
+			}
+		}
 	}
 
+	watchChanges()
 	for {
 		select {
 		case event := <-watcher.Events: // TODO: deduplicate events
+			time.Sleep(time.Second) // Just wait a bit to avoid partial changes
 			slog.Info("Certificate changed", "event", event)
 			if err := b.load(); err != nil {
 				slog.Error("Failed to reload bundle", "error", err)
 			}
+			watchChanges()
 		case err := <-watcher.Errors:
 			slog.Error("File watcher error", "error", err)
 		case <-ctx.Done():
