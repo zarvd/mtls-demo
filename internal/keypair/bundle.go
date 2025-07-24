@@ -51,6 +51,7 @@ func (b *Bundle) StartReloadLoop(ctx context.Context) {
 	defer watcher.Close()
 
 	for _, path := range b.opts.ListFilePaths() {
+		slog.Info("Watching file", "path", path)
 		watcher.Add(path)
 	}
 
@@ -73,7 +74,6 @@ func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
 	return &tls.Config{
 		InsecureSkipVerify: true, // Enable custom certificate verification
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			slog.Info("Verifying peer certificate")
 			certs := make([]*x509.Certificate, 0, len(rawCerts))
 			for _, rawCert := range rawCerts {
 				cert, err := x509.ParseCertificate(rawCert)
@@ -94,7 +94,6 @@ func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
 			return nil
 		},
 		GetClientCertificate: func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			slog.Info("Getting client certificate")
 			keyPair := b.KeyPair()
 			return keyPair.Certificate, nil
 		},
@@ -104,7 +103,6 @@ func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
 func (b *Bundle) CreateTLSConfigForServer() *tls.Config {
 	return &tls.Config{
 		GetConfigForClient: func(info *tls.ClientHelloInfo) (*tls.Config, error) {
-			slog.Info("Getting config for client", slog.String("server_name", info.ServerName))
 			keyPair := b.KeyPair()
 			return &tls.Config{
 				ClientAuth: tls.RequireAndVerifyClientCert,
@@ -120,10 +118,7 @@ func (b *Bundle) CreateTLSConfigForServer() *tls.Config {
 func (b *Bundle) load() error {
 	t1 := time.Now()
 	defer func() {
-		elapsed := time.Since(t1)
-		if elapsed > 1*time.Millisecond {
-			slog.Info("Loaded bundles", slog.Duration("duration", elapsed))
-		}
+		slog.Info("Loaded bundles", slog.Duration("duration", time.Since(t1)))
 	}()
 
 	caBundle, err := os.ReadFile(b.opts.CABundle)

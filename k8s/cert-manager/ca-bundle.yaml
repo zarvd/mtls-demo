@@ -6,6 +6,7 @@ spec:
   sources:
     - secret:
         name: ca-key-pair-0001
+        key: tls.crt
   target:
     namespaceSelector:
       matchLabels:

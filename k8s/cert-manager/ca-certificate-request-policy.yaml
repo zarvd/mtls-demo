@@ -37,11 +37,11 @@ spec:
       - "digital signature"
     commonName:
       required: true
-      value: "*.*.svc.cluster.local"
+      value: "*"
     dnsNames:
       required: true
       values:
-        - "*.*.svc.cluster.local"
+        - "*"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
