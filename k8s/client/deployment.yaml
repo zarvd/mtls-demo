@@ -15,27 +15,22 @@ spec:
     spec:
       containers:
         - name: mtls-client
-          image: ghcr.io/zarvd/mtls-demo/client:73817675847ae76b47149f9fd57b87d84f876153
+          image: ghcr.io/zarvd/mtls-demo/client:fe3a61c1a27585812fbef8b90a89f6f2038c81c7
           command:
             - /usr/local/bin/mtls-client
-            - --certificate-authorities
-            - /certs/alpha/ca.crt
-            - --certificate-authorities
-            - /certs/beta/ca.crt
-            - --key-pairs
-            - /certs/alpha/tls.crt:/certs/alpha/tls.key
-            - --key-pairs
-            - /certs/beta/tls.crt:/certs/beta/tls.key
+            - --ca-bundle=/certs/ca/ca-bundle.pem
+            - --certificate=/certs/client/tls.crt
+            - --key=/certs/client/tls.key
             - --server-address
             - https://mtls-server.mtls-server.svc.cluster.local:8443/ping
             - --server-name
             - mtls-server.mtls-server.svc.cluster.local
           volumeMounts:
-            - name: certs-alpha
-              mountPath: /certs/alpha
+            - name: client-certs
+              mountPath: /certs/client
               readOnly: true
-            - name: certs-beta
-              mountPath: /certs/beta
+            - name: ca-bundle
+              mountPath: /certs/ca
               readOnly: true
           resources:
             requests:
@@ -45,9 +40,9 @@ spec:
               cpu: 1000m
               memory: 1000Mi
       volumes:
-        - name: certs-alpha
+        - name: client-certs
           secret:
-            secretName: client-secret-alpha
-        - name: certs-beta
-          secret:
-            secretName: client-secret-beta
+            secretName: client-secret
+        - name: ca-bundle
+          configMap:
+            name: intra-cluster-mtls-ca-bundle

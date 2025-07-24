@@ -1,63 +1,76 @@
 package main
 
 import (
-	"crypto/x509/pkix"
-	"log"
-
 	"github.com/alecthomas/kong"
 )
 
+type Action string
+
+const (
+	ActionNew          = "new"
+	ActionRotateCA     = "rotate-ca"
+	ActionRotateServer = "rotate-server"
+	ActionRotateClient = "rotate-client"
+)
+
 type CLI struct {
+	Action Action `arg:"" required:"" enum:"new,rotate-ca,rotate-server,rotate-client" help:"Action to perform"`
 }
+
+const (
+	CABundlePath   = "certs/ca-bundle.crt"
+	CACertPath     = "certs/ca.crt"
+	CAKeyPath      = "certs/ca.key"
+	ServerCertPath = "certs/server/tls.crt"
+	ServerKeyPath  = "certs/server/tls.key"
+	ClientCertPath = "certs/client/tls.crt"
+	ClientKeyPath  = "certs/client/tls.key"
+)
 
 func main() {
 	cli := new(CLI)
 	cliCtx := kong.Parse(cli)
 
-	const (
-		Country    = "CN"
-		Province   = "Guangdong"
-		City       = "Shenzhen"
-		CommonName = "CA"
-		Email      = "mtls-ca@zarvd.dev"
-	)
+	switch cli.Action {
+	case ActionNew:
+		ca := mustMakeCA()
+		server := mustMakeServerCertificate(ca)
+		client := mustMakeClientCertificate(ca)
 
-	ca, err := makeCertificateAuthority(pkix.Name{
-		Country:    []string{Country},
-		Province:   []string{Province},
-		Locality:   []string{City},
-		CommonName: "mtls-ca",
-	})
-	if err != nil {
-		log.Fatalf("Failed to make CA: %v", err)
+		cliCtx.FatalIfErrorf(ca.SaveBundleWith([]*KeyPair{}, CABundlePath))
+		cliCtx.FatalIfErrorf(ca.SaveCertificate(CACertPath))
+		cliCtx.FatalIfErrorf(ca.SavePrivateKey(CAKeyPath))
+		cliCtx.FatalIfErrorf(server.SaveCertificate(ServerCertPath))
+		cliCtx.FatalIfErrorf(server.SavePrivateKey(ServerKeyPath))
+		cliCtx.FatalIfErrorf(client.SaveCertificate(ClientCertPath))
+		cliCtx.FatalIfErrorf(client.SavePrivateKey(ClientKeyPath))
+	case ActionRotateCA:
+		newCA := mustMakeCA()
+		oldCA, err := loadCertificateAuthority(CACertPath, CAKeyPath)
+		if err != nil {
+			cliCtx.Fatalf("Failed to load old CA: %v", err)
+		}
+
+		cliCtx.FatalIfErrorf(newCA.SaveBundleWith([]*KeyPair{oldCA}, CABundlePath))
+		cliCtx.FatalIfErrorf(newCA.SaveCertificate(CACertPath))
+		cliCtx.FatalIfErrorf(newCA.SavePrivateKey(CAKeyPath))
+	case ActionRotateServer:
+		ca, err := loadCertificateAuthority(CACertPath, CAKeyPath)
+		if err != nil {
+			cliCtx.Fatalf("Failed to load CA: %v", err)
+		}
+		server := mustMakeServerCertificate(ca)
+		cliCtx.FatalIfErrorf(server.SaveCertificate(ServerCertPath))
+		cliCtx.FatalIfErrorf(server.SavePrivateKey(ServerKeyPath))
+	case ActionRotateClient:
+		ca, err := loadCertificateAuthority(CACertPath, CAKeyPath)
+		if err != nil {
+			cliCtx.Fatalf("Failed to load CA: %v", err)
+		}
+		client := mustMakeClientCertificate(ca)
+		cliCtx.FatalIfErrorf(client.SaveCertificate(ClientCertPath))
+		cliCtx.FatalIfErrorf(client.SavePrivateKey(ClientKeyPath))
+	default:
+		cliCtx.Fatalf("Unknown action: %s", cli.Action)
 	}
-
-	server, err := makeServerCertificate(ca, pkix.Name{
-		Country:    []string{Country},
-		Province:   []string{Province},
-		Locality:   []string{City},
-		CommonName: "mtls-server",
-	}, []string{"mtls-server.zarvd.dev"})
-	if err != nil {
-		log.Fatalf("Failed to make server: %v", err)
-	}
-
-	client, err := makeClientCertificate(ca, pkix.Name{
-		Country:    []string{Country},
-		Province:   []string{Province},
-		Locality:   []string{City},
-		CommonName: "mtls-client",
-	}, []string{"mtls-client.zarvd.dev"})
-	if err != nil {
-		log.Fatalf("Failed to make client: %v", err)
-	}
-
-	cliCtx.FatalIfErrorf(ca.SaveCertificate("certs/ca.crt"))
-	cliCtx.FatalIfErrorf(ca.SavePrivateKey("certs/ca.key"))
-
-	cliCtx.FatalIfErrorf(server.SaveCertificate("certs/server.crt"))
-	cliCtx.FatalIfErrorf(server.SavePrivateKey("certs/server.key"))
-
-	cliCtx.FatalIfErrorf(client.SaveCertificate("certs/client.crt"))
-	cliCtx.FatalIfErrorf(client.SavePrivateKey("certs/client.key"))
 }

@@ -17,12 +17,12 @@ type KeyPair struct {
 	CA *KeyPair
 }
 
-func (kp *KeyPair) SaveCertificate(path string) error {
+func (kp *KeyPair) certificatePEM() ([]byte, error) {
 	caBytes, err := x509.CreateCertificate(
 		rand.Reader, kp.Certificate, kp.CA.Certificate, &kp.PrivateKey.PublicKey, kp.CA.PrivateKey,
 	)
 	if err != nil {
-		return fmt.Errorf("create certificate: %w", err)
+		return nil, fmt.Errorf("create certificate: %w", err)
 	}
 
 	caPEM := new(bytes.Buffer)
@@ -31,7 +31,15 @@ func (kp *KeyPair) SaveCertificate(path string) error {
 		Bytes: caBytes,
 	})
 
-	return os.WriteFile(path, caPEM.Bytes(), 0644)
+	return caPEM.Bytes(), nil
+}
+
+func (kp *KeyPair) SaveCertificate(path string) error {
+	pemBytes, err := kp.certificatePEM()
+	if err != nil {
+		return fmt.Errorf("save certificate: %w", err)
+	}
+	return os.WriteFile(path, pemBytes, 0644)
 }
 
 func (kp *KeyPair) SavePrivateKey(path string) error {
@@ -42,4 +50,21 @@ func (kp *KeyPair) SavePrivateKey(path string) error {
 	})
 
 	return os.WriteFile(path, keyPEM.Bytes(), 0600)
+}
+
+func (kp *KeyPair) SaveBundleWith(keyPairs []*KeyPair, path string) error {
+	keyPairs = append([]*KeyPair{kp}, keyPairs...)
+	buf := new(bytes.Buffer)
+	for i, keyPair := range keyPairs {
+		caPEM, err := keyPair.certificatePEM()
+		if err != nil {
+			return fmt.Errorf("save bundle: %w", err)
+		}
+		if i > 0 {
+			buf.Write([]byte("\n"))
+		}
+		buf.Write(caPEM)
+	}
+
+	return os.WriteFile(path, buf.Bytes(), 0644)
 }

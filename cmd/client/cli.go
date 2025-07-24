@@ -72,6 +72,7 @@ func (c *CLI) Run(ctx context.Context) error {
 		case <-ticker.C:
 			if err := sendRequest(); err != nil {
 				slog.Error("Failed to send request", slog.String("error", err.Error()))
+				panic("failed to send request")
 			}
 		case <-ctx.Done():
 			return ctx.Err()

@@ -1,24 +1,25 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: certificate-alpha
-  namespace: mtls-client
+  name: server-certificate
+  namespace: mtls-server
 spec:
   duration: 1h
   renewBefore: 30m
-  secretName: client-secret-alpha
-  commonName: mtls-client.mtls-client.svc.cluster.local
+  secretName: server-secret
+  commonName: mtls-server.mtls-server.svc.cluster.local
   dnsNames:
-    - mtls-client.mtls-client.svc.cluster.local
+    - mtls-server.mtls-server.svc.cluster.local
   usages:
-    - client auth
+    - server auth
     - digital signature
+    - key encipherment
   privateKey:
     rotationPolicy: Always
     algorithm: RSA
     encoding: PKCS1
     size: 4096
   issuerRef:
-    name: ca-issuer-alpha
+    name: ca-issuer
     kind: ClusterIssuer
     group: cert-manager.io

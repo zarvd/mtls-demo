@@ -1,15 +1,15 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: certificate-beta
+  name: client-certificate
   namespace: mtls-client
 spec:
   duration: 1h
   renewBefore: 30m
-  secretName: client-secret-beta
-  commonName: mtls-client.mtls-client.svc.cluster.local
+  secretName: client-secret
+  commonName: mtls-client
   dnsNames:
-    - mtls-client.mtls-client.svc.cluster.local
+    - mtls-client
   usages:
     - client auth
     - digital signature
@@ -19,6 +19,6 @@ spec:
     encoding: PKCS1
     size: 4096
   issuerRef:
-    name: ca-issuer-beta
+    name: ca-issuer
     kind: ClusterIssuer
     group: cert-manager.io

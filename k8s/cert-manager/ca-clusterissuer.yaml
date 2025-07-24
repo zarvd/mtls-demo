@@ -1,7 +1,7 @@
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-  name: ca-issuer-beta
+  name: ca-issuer
 spec:
   ca:
-    secretName: ca-secret-beta
+    secretName: ca-key-pair-0001
