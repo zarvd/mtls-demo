@@ -91,21 +91,38 @@ func (b *Bundle) CreateTLSConfigForClient() *tls.Config {
 		InsecureSkipVerify: true, // Enable custom certificate verification
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			certs := make([]*x509.Certificate, 0, len(rawCerts))
-			for _, rawCert := range rawCerts {
+			for i, rawCert := range rawCerts {
 				cert, err := x509.ParseCertificate(rawCert)
 				if err != nil {
-					return fmt.Errorf("custom verify peer certificate: %w", err)
+					return fmt.Errorf("parse peer certificate: %w", err)
 				}
 				certs = append(certs, cert)
+				slog.Info("Parsed peer certificate",
+					slog.Int("index", i),
+					slog.String("subject", cert.Subject.CommonName),
+					slog.String("issuer", cert.Issuer.CommonName),
+				)
 			}
-			opts := x509.VerifyOptions{
-				Roots: b.KeyPair().CAPool,
-			}
+
+			keyPair := b.KeyPair()
+			rootPool := keyPair.CAPool
+			intermediatePool := x509.NewCertPool()
 			for _, cert := range certs[1:] {
-				opts.Intermediates.AddCert(cert)
+				intermediatePool.AddCert(cert)
+			}
+
+			opts := x509.VerifyOptions{
+				Roots:         rootPool,
+				Intermediates: intermediatePool,
 			}
 			if _, err := certs[0].Verify(opts); err != nil {
-				return fmt.Errorf("custom verify peer certificate: %w", err)
+				slog.Error("Failed to verify peer certificate",
+					slog.String("error", err.Error()),
+					slog.String("key-pair", keyPair.String()),
+					slog.String("peer-cert-subject", certs[0].Subject.CommonName),
+					slog.String("peer-cert-issuer", certs[0].Issuer.CommonName),
+				)
+				return fmt.Errorf("verify peer certificate: %w", err)
 			}
 			return nil
 		},

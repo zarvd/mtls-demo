@@ -20,11 +20,12 @@ const (
 )
 
 func mustMakeCA() *KeyPair {
+	now := time.Now()
 	ca, err := makeCertificateAuthority(pkix.Name{
 		Country:    []string{Country},
 		Province:   []string{Province},
 		Locality:   []string{City},
-		CommonName: "mtls-ca",
+		CommonName: fmt.Sprintf("mtls-ca-%s", now.Format(time.DateTime)),
 	})
 	if err != nil {
 		panic(fmt.Errorf("make CA: %w", err))
