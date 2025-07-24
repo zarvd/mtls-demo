@@ -53,8 +53,6 @@ func (b *Bundle) StartReloadLoop(ctx context.Context) {
 	watchChanges := func() {
 		const MaxRetries = 3
 		for _, path := range b.opts.ListFilePaths() {
-			slog.Info("Watching file", "path", path)
-
 			watched := false
 			for range MaxRetries {
 				err := watcher.Add(path)
@@ -74,9 +72,8 @@ func (b *Bundle) StartReloadLoop(ctx context.Context) {
 	watchChanges()
 	for {
 		select {
-		case event := <-watcher.Events: // TODO: deduplicate events
+		case <-watcher.Events: // TODO: deduplicate events
 			time.Sleep(time.Second) // Just wait a bit to avoid partial changes
-			slog.Info("Certificate changed", "event", event)
 			if err := b.load(); err != nil {
 				slog.Error("Failed to reload bundle", "error", err)
 			}
@@ -137,7 +134,7 @@ func (b *Bundle) CreateTLSConfigForServer() *tls.Config {
 func (b *Bundle) load() error {
 	t1 := time.Now()
 	defer func() {
-		slog.Info("Loaded bundles", slog.Duration("duration", time.Since(t1)))
+		slog.Info("Loaded key pair", slog.Duration("duration", time.Since(t1)))
 	}()
 
 	caBundle, err := os.ReadFile(b.opts.CABundle)
@@ -149,17 +146,16 @@ func (b *Bundle) load() error {
 		return err
 	}
 
-	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(caBundle)
-
-	keyPair := &KeyPair{
-		Certificate: &cert,
-		CAPool:      caPool,
+	keyPair, err := NewKeyPair(&cert, caBundle)
+	if err != nil {
+		return err
 	}
 
 	b.mu.Lock()
 	b.keyPair = keyPair
 	b.mu.Unlock()
+
+	slog.Info("Loaded key pair", slog.String("key-pair", keyPair.String()))
 
 	return nil
 }
