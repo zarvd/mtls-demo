@@ -2,6 +2,8 @@
 
 This guide covers deploying the mTLS demo application on Kubernetes with cert-manager for automated certificate management.
 
+![topology](./assets/topology.png)
+
 ## Quick Start
 
 1. **[Setup](./setup.md)** - Install cert-manager and dependencies
