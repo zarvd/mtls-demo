@@ -39,7 +39,6 @@ func (opts *LocalFileTLSConfigLoaderOptions) defaults() error {
 
 type LocalFileTLSConfigLoader struct {
 	options LocalFileTLSConfigLoaderOptions
-
 	keyPair atomic.Pointer[TLSKeyPair]
 }
 
@@ -47,7 +46,6 @@ func NewLocalFileTLSConfigLoader(options LocalFileTLSConfigLoaderOptions) (*Loca
 	if err := options.defaults(); err != nil {
 		return nil, err
 	}
-
 	loader := &LocalFileTLSConfigLoader{options: options}
 	if err := loader.loadKeyPair(); err != nil {
 		return nil, err
@@ -58,7 +56,6 @@ func NewLocalFileTLSConfigLoader(options LocalFileTLSConfigLoaderOptions) (*Loca
 func (l *LocalFileTLSConfigLoader) StartLoop(ctx context.Context) error {
 	ticker := time.NewTicker(l.options.ReloadInterval)
 	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -81,21 +78,16 @@ func (l *LocalFileTLSConfigLoader) loadKeyPair() error {
 		return err
 	}
 	if l.keyPair.Load() != nil && l.keyPair.Load().Raw.Equal(nextRaw) {
-		// No changes, skip loading.
-		return nil
+		return nil // No changes, skip loading.
 	}
-
 	keyPair, err := nextRaw.Parse()
 	if err != nil {
 		return fmt.Errorf("parse key pair: %w", err)
 	}
-
 	if err := l.options.Validate(keyPair); err != nil {
 		return fmt.Errorf("validate key pair: %w", err)
 	}
-
 	l.keyPair.Store(keyPair)
-
 	return nil
 }
 

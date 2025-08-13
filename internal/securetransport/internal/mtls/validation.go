@@ -16,18 +16,12 @@ func validateKeyPair(keyPair *TLSKeyPair) error {
 	if keyPair.CAs == nil {
 		return fmt.Errorf("CA pool is nil")
 	}
-
-	// Validate certificate expiration
 	now := time.Now()
 	if keyPair.Certificate.Leaf.NotBefore.After(now) {
 		return fmt.Errorf("certificate is not valid yet: %s", keyPair.Certificate.Leaf.NotBefore)
 	}
 	if keyPair.Certificate.Leaf.NotAfter.Before(now.Add(MinimumCertificateValidityDuration)) {
-		return fmt.Errorf(
-			"certificate will expire in less than %s: %s",
-			MinimumCertificateValidityDuration,
-			keyPair.Certificate.Leaf.NotAfter.Sub(now),
-		)
+		return fmt.Errorf("certificate will expire in less than %s", MinimumCertificateValidityDuration)
 	}
 
 	return nil

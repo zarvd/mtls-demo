@@ -13,9 +13,7 @@ var (
 	ErrLoadCertificateAndKeyFromLocalFile = errors.New("load certificate and key from local file")
 )
 
-// TLSKeyPair represents a TLS certificate and private key pair along with
-// the associated CA certificate pool. All fields are immutable to ensure
-// thread-safety when used across multiple goroutines.
+// TLSKeyPair represents a TLS certificate, private key, and CA pool.
 type TLSKeyPair struct {
 	Certificate *tls.Certificate // Certificate is the certificate to use.
 	CAs         *x509.CertPool   // CAs is the CA pool to use.
@@ -26,9 +24,6 @@ func (k *TLSKeyPair) Equal(other *TLSKeyPair) bool {
 	return k.Raw.Equal(other.Raw)
 }
 
-// TLSKeyPairRaw represents the raw bytes of TLS certificate components,
-// including CA bundle, certificate, and private key data. It is used for
-// efficient comparison and caching to detect changes in certificate files.
 type TLSKeyPairRaw struct {
 	caBytes   []byte
 	certBytes []byte
@@ -46,12 +41,10 @@ func (s *TLSKeyPairRaw) Parse() (*TLSKeyPair, error) {
 	if !caPool.AppendCertsFromPEM(s.caBytes) {
 		return nil, ErrAppendCACertsFromPEM
 	}
-
 	cert, err := tls.X509KeyPair(s.certBytes, s.keyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrLoadCertificateAndKeyFromLocalFile, err)
 	}
-
 	return &TLSKeyPair{
 		Certificate: &cert,
 		CAs:         caPool,

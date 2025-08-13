@@ -21,12 +21,11 @@ func CreateDynamicTLSTransport(
 
 func (t *dynamicTLSTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	keyPair := t.loader.KeyPair()
-	tlsConfig := &tls.Config{
-		RootCAs:      keyPair.CAs,
-		Certificates: []tls.Certificate{*keyPair.Certificate},
-	}
 	tr := &http.Transport{
-		TLSClientConfig: tlsConfig,
+		TLSClientConfig: &tls.Config{
+			RootCAs:      keyPair.CAs,
+			Certificates: []tls.Certificate{*keyPair.Certificate},
+		},
 	}
 	return tr.RoundTrip(req)
 }

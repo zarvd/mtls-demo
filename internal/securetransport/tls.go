@@ -5,8 +5,9 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/zarvd/mtls-demo/internal/securetransport/internal/mtls"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/zarvd/mtls-demo/internal/securetransport/internal/mtls"
 )
 
 // ClientTLSConfigLoader provides an interface for loading and managing TLS configurations
@@ -17,7 +18,16 @@ type ClientTLSLoader interface {
 	// It should run until the provided context is cancelled.
 	StartLoop(ctx context.Context) error
 
+	// HTTPRoundTripper returns an HTTP round tripper configured with
+	// the dynamically managed TLS configuration. The returned round tripper
+	// automatically uses updated certificates when they are reloaded,
+	// ensuring seamless certificate rotation for HTTP clients.
 	HTTPRoundTripper() http.RoundTripper
+
+	// GRPCCredentials returns gRPC transport credentials configured with
+	// the dynamically managed TLS configuration. The returned credentials
+	// automatically use updated certificates when they are reloaded,
+	// ensuring seamless certificate rotation for gRPC clients.
 	GRPCCredentials() credentials.TransportCredentials
 }
 
@@ -34,7 +44,7 @@ type ServerTLSLoader interface {
 	// automatically reloaded. If a reloaded certificate fails validation,
 	// the loader will retain the last valid configuration to ensure service continuity
 	// until a new valid certificate becomes available.
-	TLSConfig() (*tls.Config, error)
+	ServerTLSConfig() *tls.Config
 }
 
 // LocalFileTLSConfigLoaderOptions defines the configuration options for
