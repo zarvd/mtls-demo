@@ -3,6 +3,7 @@ package mtls
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -47,7 +48,80 @@ func TestIntegrationGRPC(t *testing.T) {
 	t.Run("error if server certificate not trusted by client", func(t *testing.T) {
 		t.Parallel()
 
-		bufconn.Listen(1024 * 1024)
+		serverFs := MustTempKeyPairFiles()
+		defer serverFs.Close()
+		serverFs.Save(ca, serverKeyPair)
+
+		clientFs := MustTempKeyPairFiles()
+		defer clientFs.Close()
+		clientFs.Save(secondCA, secondClientKeyPair) // use the second client key pair to make the client certificate not trusted by the server
+
+		serverLoader, err := NewLocalFileServerTLSConfigLoader(LocalFileTLSConfigLoaderOptions{
+			CABundle:       serverFs.CA.Name(),
+			Certificate:    serverFs.Certificate.Name(),
+			Key:            serverFs.Key.Name(),
+			ReloadInterval: 500 * time.Millisecond,
+		})
+		require.NoError(t, err)
+
+		clientLoader, err := NewLocalFileClientTLSConfigLoader(LocalFileTLSConfigLoaderOptions{
+			CABundle:       clientFs.CA.Name(),
+			Certificate:    clientFs.Certificate.Name(),
+			Key:            clientFs.Key.Name(),
+			ReloadInterval: 500 * time.Millisecond,
+		})
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var (
+			svrErrCh = make(chan error, 1)
+			cliErrCh = make(chan error, 1)
+		)
+		go func() { svrErrCh <- serverLoader.StartLoop(ctx) }()
+		go func() { cliErrCh <- clientLoader.StartLoop(ctx) }()
+
+		lis := bufconn.Listen(1024 * 1024)
+		defer lis.Close()
+
+		server := grpc.NewServer(
+			grpc.Creds(credentials.NewTLS(serverLoader.ServerTLSConfig())),
+		)
+		fake.RegisterStubService(server)
+
+		var grpcErrCh = make(chan error, 1)
+		go func() {
+			grpcErrCh <- server.Serve(lis)
+		}()
+
+		conn, err := grpc.NewClient(
+			fmt.Sprintf("passthrough:%s", serverName),
+			grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+				return lis.Dial()
+			}),
+			grpc.WithTransportCredentials(clientLoader.GRPCCredentials()),
+		)
+		require.NoError(t, err)
+		defer conn.Close()
+
+		_, err = fake.InvokePing(ctx, conn)
+		require.Error(t, err)
+
+		// Update the client certificate
+		clientFs.Save(ca, clientKeyPair)
+		conn.ResetConnectBackoff()
+		time.Sleep(2 * time.Second) // It takes a while to trigger the reconnect
+
+		// Should ok after update the client certificate
+		_, err = fake.InvokePing(ctx, conn)
+		require.NoError(t, err)
+
+		server.GracefulStop()
+		cancel()
+		require.NoError(t, <-grpcErrCh)
+		require.NoError(t, <-svrErrCh)
+		require.NoError(t, <-cliErrCh)
 	})
 
 	t.Run("ok", func(t *testing.T) {
@@ -100,7 +174,7 @@ func TestIntegrationGRPC(t *testing.T) {
 		}()
 
 		conn, err := grpc.NewClient(
-			serverName,
+			fmt.Sprintf("passthrough:%s", serverName),
 			grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 				return lis.Dial()
 			}),
@@ -170,7 +244,7 @@ func TestIntegrationGRPC(t *testing.T) {
 		}()
 
 		conn, err := grpc.NewClient(
-			serverName,
+			fmt.Sprintf("passthrough:%s", serverName),
 			grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 				return lis.Dial()
 			}),
@@ -189,7 +263,7 @@ func TestIntegrationGRPC(t *testing.T) {
 
 		// New connection should fail
 		newConn, err := grpc.NewClient(
-			serverName,
+			fmt.Sprintf("passthrough:%s", serverName),
 			grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 				return lis.Dial()
 			}),
@@ -210,7 +284,7 @@ func TestIntegrationGRPC(t *testing.T) {
 
 		// New connection should ok for the new certificate
 		newConn, err = grpc.NewClient(
-			secondServerName,
+			fmt.Sprintf("passthrough:%s", secondServerName),
 			grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 				return lis.Dial()
 			}),
