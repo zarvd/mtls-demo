@@ -22,26 +22,29 @@ func TestTLSKeyPair_Parse(t *testing.T) {
 	}{
 		{
 			Name: "invalid CA",
-			Raw: &TLSKeyPairRaw{
-				caBytes: []byte("invalid CA"),
-			},
+			Raw: NewTLSKeyPairRaw(
+				[]byte("invalid CA"),
+				ToCertificatePEM(keyPair.Certificate.Leaf.Raw),
+				ToPrivateKeyPEM(keyPair.Certificate.PrivateKey),
+			),
 			ExpectedErr: ErrAppendCACertsFromPEM,
 		},
 		{
 			Name: "invalid certificate",
-			Raw: &TLSKeyPairRaw{
-				caBytes:   ToCertificatePEM(ca.Certificate.Raw),
-				certBytes: []byte("invalid certificate"),
-			},
+			Raw: NewTLSKeyPairRaw(
+				ToCertificatePEM(ca.Certificate.Raw),
+				[]byte("invalid certificate"),
+				ToPrivateKeyPEM(keyPair.Certificate.PrivateKey),
+			),
 			ExpectedErr: ErrLoadCertificateAndKeyFromLocalFile,
 		},
 		{
 			Name: "valid key pair",
-			Raw: &TLSKeyPairRaw{
-				caBytes:   ToCertificatePEM(ca.Certificate.Raw),
-				certBytes: ToCertificatePEM(keyPair.Certificate.Leaf.Raw),
-				keyBytes:  ToPrivateKeyPEM(keyPair.Certificate.PrivateKey),
-			},
+			Raw: NewTLSKeyPairRaw(
+				ToCertificatePEM(ca.Certificate.Raw),
+				ToCertificatePEM(keyPair.Certificate.Leaf.Raw),
+				ToPrivateKeyPEM(keyPair.Certificate.PrivateKey),
+			),
 			Expected: keyPair,
 		},
 	}

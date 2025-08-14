@@ -12,6 +12,7 @@ import (
 	"errors"
 	"math/big"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -63,11 +64,7 @@ func (ca *CA) Sign(template *x509.Certificate) *TLSKeyPair {
 	return &TLSKeyPair{
 		Certificate: &cert,
 		CAs:         ca.pool(),
-		Raw: &TLSKeyPairRaw{
-			caBytes:   ToCertificatePEM(ca.Certificate.Raw),
-			certBytes: certPEM,
-			keyBytes:  pkPEM,
-		},
+		Raw:         NewTLSKeyPairRaw(ToCertificatePEM(ca.Certificate.Raw), certPEM, pkPEM),
 	}
 }
 
@@ -154,10 +151,19 @@ func fakeClientTemplate(mutates ...func(template *x509.Certificate)) *x509.Certi
 }
 
 type fakeKeyPairLoader struct {
+	mu      sync.Mutex
 	keyPair *TLSKeyPair
 }
 
+func (l *fakeKeyPairLoader) SetKeyPair(keyPair *TLSKeyPair) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.keyPair = keyPair
+}
+
 func (l *fakeKeyPairLoader) KeyPair() *TLSKeyPair {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	return l.keyPair
 }
 

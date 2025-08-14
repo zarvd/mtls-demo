@@ -17,17 +17,9 @@ type ClientTLSLoader interface {
 	// StartLoop begins the certificate monitoring and rotation loop.
 	// It should run until the provided context is cancelled.
 	StartLoop(ctx context.Context) error
-
-	// HTTPRoundTripper returns an HTTP round tripper configured with
-	// the dynamically managed TLS configuration. The returned round tripper
-	// automatically uses updated certificates when they are reloaded,
-	// ensuring seamless certificate rotation for HTTP clients.
+	// HTTPRoundTripper returns an HTTP round tripper with dynamic TLS configuration.
 	HTTPRoundTripper() http.RoundTripper
-
-	// GRPCCredentials returns gRPC transport credentials configured with
-	// the dynamically managed TLS configuration. The returned credentials
-	// automatically use updated certificates when they are reloaded,
-	// ensuring seamless certificate rotation for gRPC clients.
+	// GRPCCredentials returns gRPC transport credentials with dynamic TLS configuration.
 	GRPCCredentials() credentials.TransportCredentials
 }
 
@@ -38,37 +30,21 @@ type ServerTLSLoader interface {
 	// StartLoop begins the certificate monitoring and rotation loop.
 	// It should run until the provided context is cancelled.
 	StartLoop(ctx context.Context) error
-
-	// TLSConfig returns the current TLS configuration for server connections.
-	// The returned configuration is dynamically updated when certificates are
-	// automatically reloaded. If a reloaded certificate fails validation,
-	// the loader will retain the last valid configuration to ensure service continuity
-	// until a new valid certificate becomes available.
+	// ServerTLSConfig returns the current TLS configuration for server connections.
+	// The configuration is automatically updated when certificates are reloaded.
 	ServerTLSConfig() *tls.Config
 }
 
-// LocalFileTLSConfigLoaderOptions defines the configuration options for
-// loading TLS certificates from local files.
 type LocalFileTLSConfigLoaderOptions = mtls.LocalFileTLSConfigLoaderOptions
 
-// NewLocalFileClientTLSConfigLoader creates a new ClientTLSConfigLoader that
-// loads TLS certificates from local files. The loader monitors the certificate
-// files for changes and automatically reloads them when modified.
-//
-// The options parameter specifies the paths to the CA bundle, certificate,
-// and private key files, along with the reload interval and validation function.
-// If no validation function is provided, it defaults to client-specific validation.
+// NewLocalFileClientTLSConfigLoader creates a ClientTLSConfigLoader that
+// loads TLS certificates from local files with automatic reloading.
 func NewLocalFileClientTLSConfigLoader(options LocalFileTLSConfigLoaderOptions) (ClientTLSLoader, error) {
 	return mtls.NewLocalFileClientTLSConfigLoader(options)
 }
 
-// NewLocalFileServerTLSConfigLoader creates a new ServerTLSConfigLoader that
-// loads TLS certificates from local files. The loader monitors the certificate
-// files for changes and automatically reloads them when modified.
-//
-// The options parameter specifies the paths to the CA bundle, certificate,
-// and private key files, along with the reload interval and validation function.
-// If no validation function is provided, it defaults to server-specific validation.
+// NewLocalFileServerTLSConfigLoader creates a ServerTLSConfigLoader that
+// loads TLS certificates from local files with automatic reloading.
 func NewLocalFileServerTLSConfigLoader(options LocalFileTLSConfigLoaderOptions) (ServerTLSLoader, error) {
 	return mtls.NewLocalFileServerTLSConfigLoader(options)
 }

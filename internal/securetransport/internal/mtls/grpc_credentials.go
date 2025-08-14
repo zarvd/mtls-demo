@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
-	"sync"
 	"sync/atomic"
 
 	"google.golang.org/grpc/credentials"
@@ -15,7 +14,6 @@ var _ credentials.TransportCredentials = (*dynamicTLSCredentials)(nil)
 type dynamicTLSCredentials struct {
 	loader interface{ KeyPair() *TLSKeyPair }
 	inner  atomic.Pointer[credentialsWithKeyPair]
-	initMu sync.Mutex
 }
 
 type credentialsWithKeyPair struct {
@@ -51,29 +49,18 @@ func (d *dynamicTLSCredentials) OverrideServerName(serverNameOverride string) er
 // If the key pair has changed, it will create a new credentials.TransportCredentials.
 func (d *dynamicTLSCredentials) innerCredentials() credentials.TransportCredentials {
 	inner := d.inner.Load()
-	if inner != nil && inner.KeyPair.Equal(d.loader.KeyPair()) {
+	nextKeyPair := d.loader.KeyPair()
+	if inner != nil && inner.KeyPair.Equal(nextKeyPair) {
 		return inner.Credentials
 	}
-
-	// singleflight
-	d.initMu.Lock()
-	defer d.initMu.Unlock()
-
-	// Double check under lock.
-	inner = d.inner.Load()
-	if inner != nil && inner.KeyPair.Equal(d.loader.KeyPair()) {
-		return inner.Credentials
-	}
-
 	// Create new credentials.
-	keyPair := d.loader.KeyPair()
 	cred := credentials.NewTLS(&tls.Config{
-		RootCAs:      keyPair.CAs,
-		Certificates: []tls.Certificate{*keyPair.Certificate},
+		RootCAs:      nextKeyPair.CAs,
+		Certificates: []tls.Certificate{*nextKeyPair.Certificate},
 	})
 	d.inner.Store(&credentialsWithKeyPair{
 		Credentials: cred,
-		KeyPair:     keyPair,
+		KeyPair:     nextKeyPair,
 	})
 	return cred
 }

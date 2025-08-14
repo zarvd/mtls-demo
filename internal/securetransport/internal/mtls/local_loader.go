@@ -104,9 +104,5 @@ func (l *LocalFileTLSConfigLoader) readKeyPairRaw() (*TLSKeyPairRaw, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read key from local file: %w", err)
 	}
-	return &TLSKeyPairRaw{
-		caBytes:   bundlePEM,
-		certBytes: certPEM,
-		keyBytes:  keyPEM,
-	}, nil
+	return NewTLSKeyPairRaw(bundlePEM, certPEM, keyPEM), nil
 }

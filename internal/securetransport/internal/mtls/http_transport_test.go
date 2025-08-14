@@ -139,6 +139,28 @@ func TestCreateDynamicTLSTransport(t *testing.T) {
 			clientLoader    = &fakeKeyPairLoader{keyPair: clientKeyPair}
 			serverTLSConfig = CreateTLSConfigForServer(serverLoader)
 			clientTransport = CreateDynamicTLSTransport(clientLoader)
+
+			invalidServerKeyPair = func() *TLSKeyPair {
+				untrustedCA := fakeCA(fakeCATemplate())
+				rv, err := NewTLSKeyPairRaw(
+					ToCertificatePEM(untrustedCA.Certificate.Raw),
+					ToCertificatePEM(serverKeyPair.Certificate.Leaf.Raw),
+					ToPrivateKeyPEM(serverKeyPair.Certificate.PrivateKey),
+				).Parse()
+				PanicIfErr(err)
+				return rv
+			}
+
+			invalidClientKeyPair = func() *TLSKeyPair {
+				untrustedCA := fakeCA(fakeCATemplate())
+				rv, err := NewTLSKeyPairRaw(
+					ToCertificatePEM(untrustedCA.Certificate.Raw),
+					ToCertificatePEM(clientKeyPair.Certificate.Leaf.Raw),
+					ToPrivateKeyPEM(clientKeyPair.Certificate.PrivateKey),
+				).Parse()
+				PanicIfErr(err)
+				return rv
+			}
 		)
 
 		server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +180,7 @@ func TestCreateDynamicTLSTransport(t *testing.T) {
 		client.CloseIdleConnections()
 
 		// Switch to: server certificate is not trusted
-		serverLoader.keyPair.CAs = fakeCA(fakeCATemplate()).pool()
+		serverLoader.SetKeyPair(invalidServerKeyPair())
 		_, err = client.Get(server.URL)
 		require.Error(t, err)
 		const InternalTLSClientError = "unknown certificate authority"
@@ -166,14 +188,16 @@ func TestCreateDynamicTLSTransport(t *testing.T) {
 		client.CloseIdleConnections()
 
 		// Switch to: happy path
-		serverLoader.keyPair.CAs = ca.pool()
+		serverLoader.SetKeyPair(serverKeyPair)
 		resp, err = client.Get(server.URL)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		client.CloseIdleConnections()
 
 		// Switch to: client certificate is not trusted
-		clientLoader.keyPair.CAs = fakeCA(fakeCATemplate()).pool()
+		clientLoader.SetKeyPair(invalidClientKeyPair())
+		client.CloseIdleConnections()
+		println("reloading")
 		resp, err = client.Get(server.URL)
 		require.Error(t, err)
 		var unknownAuthorityError x509.UnknownAuthorityError
@@ -182,7 +206,7 @@ func TestCreateDynamicTLSTransport(t *testing.T) {
 		client.CloseIdleConnections()
 
 		// Switch to: happy path
-		clientLoader.keyPair.CAs = ca.pool()
+		clientLoader.SetKeyPair(clientKeyPair)
 		resp, err = client.Get(server.URL)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

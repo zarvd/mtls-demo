@@ -2,6 +2,7 @@ package mtls
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -13,7 +14,6 @@ var (
 	ErrLoadCertificateAndKeyFromLocalFile = errors.New("load certificate and key from local file")
 )
 
-// TLSKeyPair represents a TLS certificate, private key, and CA pool.
 type TLSKeyPair struct {
 	Certificate *tls.Certificate // Certificate is the certificate to use.
 	CAs         *x509.CertPool   // CAs is the CA pool to use.
@@ -28,12 +28,29 @@ type TLSKeyPairRaw struct {
 	caBytes   []byte
 	certBytes []byte
 	keyBytes  []byte
+	checkSum  []byte
+}
+
+func NewTLSKeyPairRaw(caBytes, certBytes, keyBytes []byte) *TLSKeyPairRaw {
+	raw := &TLSKeyPairRaw{
+		caBytes:   caBytes,
+		certBytes: certBytes,
+		keyBytes:  keyBytes,
+	}
+	raw.checkSum = raw.calculateCheckSum()
+	return raw
+}
+
+func (s *TLSKeyPairRaw) calculateCheckSum() []byte {
+	h := sha256.New()
+	h.Write(s.caBytes)
+	h.Write(s.certBytes)
+	h.Write(s.keyBytes)
+	return h.Sum(nil)
 }
 
 func (s *TLSKeyPairRaw) Equal(other *TLSKeyPairRaw) bool {
-	return bytes.Equal(s.caBytes, other.caBytes) &&
-		bytes.Equal(s.certBytes, other.certBytes) &&
-		bytes.Equal(s.keyBytes, other.keyBytes)
+	return bytes.Equal(s.checkSum, other.checkSum)
 }
 
 func (s *TLSKeyPairRaw) Parse() (*TLSKeyPair, error) {
